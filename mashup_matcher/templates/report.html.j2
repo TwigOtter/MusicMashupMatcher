@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mashup Matcher — {{ label_a }} × {{ label_b }}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 2rem auto; max-width: 60rem; color: #222; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; border-bottom: 1px solid #ddd; padding-bottom: 0.2rem; }
+  .meta { color: #666; font-size: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 0.3rem 0.6rem; border-bottom: 1px solid #eee; }
+  th { color: #666; font-weight: 600; }
+  .score { font-weight: 700; text-align: right; }
+  .score-high { color: #1a7f37; }
+  .score-mid { color: #9a6700; }
+  .score-low { color: #c0392b; }
+  footer { margin-top: 2.5rem; color: #888; font-size: 0.8rem; }
+  @media print { body { margin: 0.5rem; } }
+</style>
+</head>
+<body>
+<h1>Mashup Matcher</h1>
+<p class="meta">{{ label_a }} × {{ label_b }} — {{ total_matches }} compatible pair{{ "s" if total_matches != 1 }}</p>
+
+{% for track_a, group in groups %}
+<h2>{{ track_a.artist }} — {{ track_a.name }}
+  <span class="meta">({{ track_a.bpm }} BPM, {{ track_a | key_display }})</span></h2>
+<table>
+  <tr><th>{{ label_b }} track</th><th>Artist</th><th>BPM</th><th>Key</th><th>Ratio</th><th>Notes</th><th>Score</th></tr>
+  {% for m in group %}
+  <tr>
+    <td>{{ m.track_b.name }}</td>
+    <td>{{ m.track_b.artist }}</td>
+    <td>{{ m.track_b.bpm }}</td>
+    <td>{{ m.track_b | key_display }}</td>
+    <td>{{ "%g" | format(m.bpm_ratio) }}×</td>
+    <td>{{ m.notes | join(", ") }}</td>
+    <td class="score {{ 'score-high' if m.score >= 80 else 'score-mid' if m.score >= 60 else 'score-low' }}">{{ m.score }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No compatible pairs found. Try loosening <code>--bpm-tolerance</code> or <code>--camelot-tolerance</code>.</p>
+{% endfor %}
+
+<footer>
+  Tempo &amp; key data partly provided by <a href="https://getsongbpm.com">GetSongBPM</a>.
+</footer>
+</body>
+</html>

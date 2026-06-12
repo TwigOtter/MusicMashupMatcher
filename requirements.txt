@@ -1,0 +1,5 @@
+# Core dependencies — enough for API-only mode (Tiers 1 & 2)
+requests>=2.31
+spotipy>=2.23
+python-dotenv>=1.0
+jinja2>=3.1
