@@ -55,6 +55,8 @@ def getsongbpm_lookup(
                 "type": "both",
                 "lookup": f"song:{_normalize(name)} artist:{_normalize(primary_artist)}",
             },
+            # Their CDN sometimes rejects the default python-requests UA.
+            headers={"User-Agent": "MashupMatcher/1.0 (+https://github.com/twigotter/musicmashupmatcher)"},
             timeout=timeout,
         )
         resp.raise_for_status()
@@ -64,8 +66,18 @@ def getsongbpm_lookup(
         return None
 
     results = payload.get("search")
-    # The API signals "no result" with a dict instead of a list.
+    # The API signals "no result" — and also bad/missing API keys — with a
+    # dict instead of a list. Surface anything that isn't a plain miss, or
+    # an invalid key looks identical to 100% cache misses.
     if not isinstance(results, list):
+        error = None
+        if isinstance(results, dict):
+            error = results.get("error")
+        error = error or payload.get("error")
+        if error and "no result" not in str(error).lower():
+            log.warning("GetSongBPM error for %s — %s: %s", artist, name, error)
+        else:
+            log.debug("GetSongBPM: no result for %s — %s", artist, name)
         return None
 
     best, best_score = None, 0.0
@@ -79,6 +91,11 @@ def getsongbpm_lookup(
     # Require a reasonably confident match — a wrong track's BPM is worse
     # than no data, since Tier 2/3 would never get the chance to correct it.
     if best is None or best_score < 1.2:
+        log.debug(
+            "GetSongBPM: best candidate too weak for %s — %s (score %.2f: %r)",
+            artist, name, best_score,
+            (best or {}).get("song_title"),
+        )
         return None
 
     try:

@@ -34,6 +34,13 @@ def test_getsongbpm_no_results():
     assert getsongbpm_lookup("X", "Y", "KEY", session=session) is None
 
 
+def test_getsongbpm_api_error_logged(caplog):
+    session = fake_session({"search": {"error": "invalid api key"}})
+    with caplog.at_level("WARNING"):
+        assert getsongbpm_lookup("X", "Y", "BADKEY", session=session) is None
+    assert "invalid api key" in caplog.text
+
+
 def test_getsongbpm_rejects_weak_match():
     session = fake_session({
         "search": [

@@ -39,6 +39,7 @@ class MetadataResolver:
     def resolve(self, track: Track) -> Track:
         if self.use_cache and (cached := self.cache.get(track.id)):
             cached.duration_ms = track.duration_ms
+            log.debug("    -> cached (%s)", cached.source)
             return cached
 
         result, source = None, None
@@ -55,8 +56,11 @@ class MetadataResolver:
         if result is not None:
             track = apply_metadata(track, result, source)
             self.cache.save(track)
+            log.info(
+                "    -> %s: %.4g BPM, %s", source, track.bpm, track.camelot or "key unknown"
+            )
         else:
-            log.info("No metadata found for %s — %s", track.artist, track.name)
+            log.info("    -> no metadata found")
         return track
 
     def resolve_all(self, tracks: list[Track], label: str = "") -> list[Track]:

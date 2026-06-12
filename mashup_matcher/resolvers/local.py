@@ -12,7 +12,9 @@ rest of the tool works without them.
 from __future__ import annotations
 
 import logging
+import shutil
 import tempfile
+import warnings
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -46,6 +48,13 @@ def _download_audio(name: str, artist: str, dest_dir: Path) -> Path | None:
         # not the track we asked for.
         "match_filter": yt_dlp.utils.match_filter_func("duration < 720"),
     }
+    # YouTube audio usually arrives as webm/opus, which soundfile can't read
+    # and forces librosa onto a slow deprecated fallback. With ffmpeg
+    # available, convert to wav so loading is fast and warning-free.
+    if shutil.which("ffmpeg"):
+        opts["postprocessors"] = [
+            {"key": "FFmpegExtractAudio", "preferredcodec": "wav"}
+        ]
     query = f"{artist} {name} audio"
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -75,7 +84,12 @@ def _analyze_file(path: Path) -> dict | None:
     import librosa
     import numpy as np
 
-    y, sr = librosa.load(path, sr=22050, mono=True)
+    with warnings.catch_warnings():
+        # Without ffmpeg, librosa falls back to audioread for webm/opus and
+        # emits a UserWarning + FutureWarning each time. The fallback works
+        # fine; don't spam the run log with it.
+        warnings.simplefilter("ignore")
+        y, sr = librosa.load(path, sr=22050, mono=True)
     if y.size == 0:
         return None
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
